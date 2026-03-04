@@ -4,6 +4,7 @@ import { AuthProvider, useAuth } from './context/AuthContext'
 import SignUp from './pages/SignUp'
 import SignIn from './pages/SignIn'
 import Dashboard from './pages/Dashboard'
+import SupplierOnboarding from './pages/SupplierOnboarding'
 
 function ProtectedRoute({ children }) {
   const { user, loading } = useAuth()
@@ -86,6 +87,7 @@ export default function App() {
             <Route path="/" element={<Home />} />
             <Route path="/signup" element={<PublicOnlyRoute><SignUp /></PublicOnlyRoute>} />
             <Route path="/signin" element={<PublicOnlyRoute><SignIn /></PublicOnlyRoute>} />
+            <Route path="/onboarding" element={<ProtectedRoute><SupplierOnboarding /></ProtectedRoute>} />
             <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
