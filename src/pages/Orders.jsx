@@ -54,10 +54,11 @@ export default function Orders() {
           supplier_profiles (business_name)
         `)
         .eq('supplier_id', supplierProfile.id)
+        .eq('deleted_by_supplier', false)
         .order('created_at', { ascending: false })
     } else {
       // Buyer sees their own orders
-      query = supabase
+     query = supabase
         .from('orders')
         .select(`
           *,
@@ -65,6 +66,7 @@ export default function Orders() {
           supplier_profiles (business_name, phone, location)
         `)
         .eq('buyer_id', user.id)
+        .eq('deleted_by_buyer', false)
         .order('created_at', { ascending: false })
     }
 

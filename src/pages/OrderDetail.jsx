@@ -5,8 +5,9 @@ import { supabase } from '../lib/supabase'
 import {
   ArrowLeft, Package, MapPin, Phone,
   Clock, CheckCircle, XCircle, Truck,
-  AlertCircle, User
+  AlertCircle, User, Trash2
 } from 'lucide-react'
+
 
 const STATUS_CONFIG = {
   pending:   { label: 'Pending',   color: 'bg-yellow-50 text-yellow-700 border-yellow-200', icon: Clock },
@@ -176,6 +177,21 @@ export default function OrderDetail() {
 
     fetchOrder()
   }, [id])
+ const handleDelete = async () => {
+    if (!confirm('Are you sure you want to delete this order from your history?')) return
+    setUpdating(true)
+    const updateField = isSupplier ? 'deleted_by_supplier' : 'deleted_by_buyer'
+    const { error } = await supabase
+      .from('orders')
+      .update({ [updateField]: true })
+      .eq('id', id)
+    if (error) {
+      setError(error.message)
+      setUpdating(false)
+    } else {
+      navigate('/orders')
+    }
+  }
 
   const updateStatus = async (newStatus) => {
     setUpdating(true)
@@ -396,6 +412,17 @@ export default function OrderDetail() {
           {/* Buyer review - only for delivered orders */}
           {!isSupplier && order.status === 'delivered' && (
             <ReviewForm orderId={id} productId={order.product_id} supplierId={order.supplier_id} buyerId={user.id} />
+          )}
+          {/* Delete order - available to both roles for completed orders */}
+          {(['delivered', 'rejected', 'cancelled'].includes(order.status)) && (
+            <button
+              onClick={handleDelete}
+              disabled={updating}
+              className="w-full flex items-center justify-center gap-2 p-3 bg-stone-50 border border-stone-200 text-stone-400 font-medium rounded-xl hover:bg-red-50 hover:border-red-200 hover:text-red-500 transition-colors disabled:opacity-50 text-sm"
+            >
+              <Trash2 className="w-4 h-4" />
+              {updating ? 'Deleting...' : 'Delete Order'}
+            </button>
           )}
           {!isSupplier && order.status === 'pending' && (
             <button
