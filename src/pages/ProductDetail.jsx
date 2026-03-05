@@ -227,7 +227,15 @@ export default function ProductDetail() {
             {supplier && (
               <div className="mt-6 bg-white rounded-xl border border-stone-200 p-4">
                 <p className="text-xs text-stone-400 mb-2 font-medium uppercase tracking-wide">Sold by</p>
-                <p className="font-bold text-stone-800 mb-1">{supplier.business_name}</p>
+                <div className="flex items-center justify-between mb-1">
+                  <p className="font-bold text-stone-800">{supplier.business_name}</p>
+                  <Link
+                    to={`/suppliers/${supplier.id}`}
+                    className="text-xs text-copper-600 hover:text-copper-700 font-medium"
+                  >
+                    View Store →
+                  </Link>
+                </div>
                 <div className="flex flex-col gap-1">
                   <span className="flex items-center gap-1.5 text-sm text-stone-500">
                     <MapPin className="w-3.5 h-3.5" />{supplier.location}

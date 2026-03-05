@@ -12,6 +12,9 @@ import EditProfile from './pages/EditProfile'
 import PlaceOrder from './pages/PlaceOrder'
 import Orders from './pages/Orders'
 import OrderDetail from './pages/OrderDetail'
+import Browse from './pages/Browse'
+import SupplierProfile from './pages/SupplierProfile'
+
 
 function ProtectedRoute({ children }) {
   const { user, loading } = useAuth()
@@ -103,6 +106,8 @@ export default function App() {
             <Route path="/products/:id/order" element={<ProtectedRoute><PlaceOrder /></ProtectedRoute>} />
             <Route path="/orders" element={<ProtectedRoute><Orders /></ProtectedRoute>} />
             <Route path="/orders/:id" element={<ProtectedRoute><OrderDetail /></ProtectedRoute>} />
+            <Route path="/browse" element={<ProtectedRoute><Browse /></ProtectedRoute>} />
+            <Route path="/suppliers/:id" element={<ProtectedRoute><SupplierProfile /></ProtectedRoute>} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </AuthProvider>
