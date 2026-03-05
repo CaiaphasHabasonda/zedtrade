@@ -1,6 +1,7 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
+import { supabase } from '../lib/supabase'
 import {
   Store, Package, ShoppingCart, Star,
   TrendingUp, Plus, Settings, LogOut,
@@ -37,6 +38,49 @@ function TopNav({ user, onSignOut }) {
 }
 
 function SupplierDashboard({ profile, user, onSignOut }) {
+const [products, setProducts] = useState([])
+  const [productsLoading, setProductsLoading] = useState(true)
+  const [recentOrders, setRecentOrders] = useState([])
+  const [revenue, setRevenue] = useState(0)
+
+  useEffect(() => {
+    const fetchProducts = async () => {
+      const { data } = await supabase
+        .from('products')
+        .select('*')
+        .eq('supplier_id', profile.id)
+        .eq('is_active', true)
+        .order('created_at', { ascending: false })
+      setProducts(data || [])
+      setProductsLoading(false)
+    }
+
+   const fetchRecentOrders = async () => {
+      const { data } = await supabase
+        .from('orders')
+        .select(`*, products (name, images, unit)`)
+        .eq('supplier_id', profile.id)
+        .order('created_at', { ascending: false })
+        .limit(5)
+      setRecentOrders(data || [])
+    }
+
+    const fetchRevenue = async () => {
+      const { data } = await supabase
+        .from('orders')
+        .select('total_price')
+        .eq('supplier_id', profile.id)
+        .in('status', ['confirmed', 'delivered'])
+      const total = (data || []).reduce((sum, o) => sum + parseFloat(o.total_price), 0)
+      setRevenue(total)
+    }
+
+    fetchRevenue()
+
+    fetchProducts()
+    fetchRecentOrders()
+  }, [profile.id])
+
   return (
     <div className="min-h-screen bg-stone-50">
       <TopNav user={user} onSignOut={onSignOut} />
@@ -76,10 +120,10 @@ function SupplierDashboard({ profile, user, onSignOut }) {
         {/* Stats Grid */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
           {[
-            { label: 'Active Products', value: '0', icon: Package, color: 'text-blue-500', bg: 'bg-blue-50' },
-            { label: 'Total Orders', value: profile.total_orders || '0', icon: ShoppingCart, color: 'text-copper-500', bg: 'bg-orange-50' },
-            { label: 'Avg Rating', value: profile.avg_rating > 0 ? profile.avg_rating : '—', icon: Star, color: 'text-yellow-500', bg: 'bg-yellow-50' },
-            { label: 'Revenue (K)', value: '0', icon: TrendingUp, color: 'text-green-500', bg: 'bg-green-50' },
+            { label: 'Active Products', value: products.length, icon: Package, color: 'text-blue-500', bg: 'bg-blue-50' },
+           { label: 'Total Orders', value: recentOrders.length > 0 ? recentOrders.length : profile.total_orders || '0', icon: ShoppingCart, color: 'text-copper-500', bg: 'bg-orange-50' },
+            { label: 'Avg Rating', value: profile.avg_rating > 0 ? `${profile.avg_rating}★` : '—', icon: Star, color: 'text-yellow-500', bg: 'bg-yellow-50' },
+            { label: 'Revenue (K)', value: revenue > 0 ? `K${revenue.toFixed(0)}` : '0', icon: TrendingUp, color: 'text-green-500', bg: 'bg-green-50' },
           ].map(stat => (
             <div key={stat.label} className="bg-white rounded-xl border border-stone-200 p-4">
               <div className={`w-9 h-9 ${stat.bg} rounded-lg flex items-center justify-center mb-3`}>
@@ -94,11 +138,18 @@ function SupplierDashboard({ profile, user, onSignOut }) {
         {/* Main content grid */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
-          {/* Products panel */}
+         {/* Products panel */}
           <div className="lg:col-span-2">
             <div className="bg-white rounded-2xl border border-stone-200 overflow-hidden">
               <div className="flex items-center justify-between p-5 border-b border-stone-100">
-                <h3 className="font-semibold text-stone-900">Your Products</h3>
+                <h3 className="font-semibold text-stone-900">
+                  Your Products
+                  {products.length > 0 && (
+                    <span className="ml-2 text-xs bg-stone-100 text-stone-500 px-2 py-0.5 rounded-full font-normal">
+                      {products.length}
+                    </span>
+                  )}
+                </h3>
                 <Link
                   to="/products/new"
                   className="btn-primary flex items-center gap-1.5 text-sm py-2 px-3"
@@ -107,22 +158,66 @@ function SupplierDashboard({ profile, user, onSignOut }) {
                   Add Product
                 </Link>
               </div>
-              <div className="p-12 text-center">
-                <div className="w-16 h-16 bg-stone-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                  <Package className="w-8 h-8 text-stone-400" />
+
+              {productsLoading ? (
+                <div className="p-12 text-center">
+                  <div className="w-8 h-8 border-4 border-stone-200 border-t-copper-500 rounded-full animate-spin mx-auto" />
                 </div>
-                <h4 className="font-semibold text-stone-700 mb-1">No products yet</h4>
-                <p className="text-stone-400 text-sm mb-5 max-w-xs mx-auto">
-                  Add your first product and start receiving orders from buyers across Zambia.
-                </p>
-                <Link
-                  to="/products/new"
-                  className="btn-primary inline-flex items-center gap-2"
-                >
-                  <Plus className="w-4 h-4" />
-                  List your first product
-                </Link>
-              </div>
+              ) : products.length === 0 ? (
+                <div className="p-12 text-center">
+                  <div className="w-16 h-16 bg-stone-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                    <Package className="w-8 h-8 text-stone-400" />
+                  </div>
+                  <h4 className="font-semibold text-stone-700 mb-1">No products yet</h4>
+                  <p className="text-stone-400 text-sm mb-5 max-w-xs mx-auto">
+                    Add your first product and start receiving orders from buyers across Zambia.
+                  </p>
+                  <Link to="/products/new" className="btn-primary inline-flex items-center gap-2">
+                    <Plus className="w-4 h-4" />
+                    List your first product
+                  </Link>
+                </div>
+              ) : (
+                <div className="divide-y divide-stone-100">
+                  {products.map(product => (
+                    <Link
+                      key={product.id}
+                      to={`/products/${product.id}`}
+                      className="flex items-center gap-4 p-4 hover:bg-stone-50 transition-colors"
+                    >
+                      {/* Image */}
+                      <div className="w-14 h-14 rounded-xl overflow-hidden bg-stone-100 flex-shrink-0">
+                        {product.images?.[0] ? (
+                          <img src={product.images[0]} alt={product.name} className="w-full h-full object-cover" />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center">
+                            <Package className="w-6 h-6 text-stone-400" />
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Info */}
+                      <div className="flex-1 min-w-0">
+                        <p className="font-semibold text-stone-800 truncate">{product.name}</p>
+                        <p className="text-xs text-stone-400 mt-0.5">{product.category}</p>
+                      </div>
+
+                      {/* Price & Stock */}
+                      <div className="text-right flex-shrink-0">
+                        <p className="font-bold text-stone-900">
+                          K{parseFloat(product.price).toFixed(2)}
+                          <span className="text-xs text-stone-400 font-normal">/{product.unit}</span>
+                        </p>
+                        <p className={`text-xs mt-0.5 ${product.stock_qty > 0 ? 'text-green-600' : 'text-red-500'}`}>
+                          {product.stock_qty > 0 ? `${product.stock_qty} in stock` : 'Out of stock'}
+                        </p>
+                      </div>
+
+                      <ChevronRight className="w-4 h-4 text-stone-400 flex-shrink-0" />
+                    </Link>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
 
@@ -135,10 +230,51 @@ function SupplierDashboard({ profile, user, onSignOut }) {
                   View all
                 </Link>
               </div>
-              <div className="p-8 text-center">
-                <ShoppingCart className="w-8 h-8 text-stone-300 mx-auto mb-2" />
-                <p className="text-stone-400 text-sm">No orders yet</p>
-              </div>
+              {recentOrders.length === 0 ? (
+                <div className="p-8 text-center">
+                  <ShoppingCart className="w-8 h-8 text-stone-300 mx-auto mb-2" />
+                  <p className="text-stone-400 text-sm">No orders yet</p>
+                </div>
+              ) : (
+                <div className="divide-y divide-stone-100">
+                  {recentOrders.map(order => {
+                    const statusColors = {
+                      pending:   'bg-yellow-50 text-yellow-700',
+                      confirmed: 'bg-blue-50 text-blue-700',
+                      rejected:  'bg-red-50 text-red-700',
+                      delivered: 'bg-green-50 text-green-700',
+                      cancelled: 'bg-stone-50 text-stone-500',
+                    }
+                    return (
+                      <Link
+                        key={order.id}
+                        to={`/orders/${order.id}`}
+                        className="flex items-center gap-3 p-4 hover:bg-stone-50 transition-colors"
+                      >
+                        <div className="w-10 h-10 rounded-lg overflow-hidden bg-stone-100 flex-shrink-0">
+                          {order.products?.images?.[0] ? (
+                            <img src={order.products.images[0]} alt="" className="w-full h-full object-cover" />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center">
+                              <Package className="w-4 h-4 text-stone-400" />
+                            </div>
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-stone-800 truncate">{order.products?.name}</p>
+                          <p className="text-xs text-stone-400">{order.buyer_name} · {order.quantity} {order.products?.unit}</p>
+                        </div>
+                        <div className="text-right flex-shrink-0">
+                          <p className="text-sm font-bold text-stone-800">K{parseFloat(order.total_price).toFixed(2)}</p>
+                          <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${statusColors[order.status]}`}>
+                            {order.status}
+                          </span>
+                        </div>
+                      </Link>
+                    )
+                  })}
+                </div>
+              )}
             </div>
 
             <div className="bg-white rounded-2xl border border-stone-200 overflow-hidden">

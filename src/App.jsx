@@ -1,3 +1,6 @@
+import EditProduct from './pages/EditProduct'
+import ProductDetail from './pages/ProductDetail'
+import AddProduct from './pages/AddProduct'
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { AuthProvider, useAuth } from './context/AuthContext'
@@ -5,6 +8,10 @@ import SignUp from './pages/SignUp'
 import SignIn from './pages/SignIn'
 import Dashboard from './pages/Dashboard'
 import SupplierOnboarding from './pages/SupplierOnboarding'
+import EditProfile from './pages/EditProfile'
+import PlaceOrder from './pages/PlaceOrder'
+import Orders from './pages/Orders'
+import OrderDetail from './pages/OrderDetail'
 
 function ProtectedRoute({ children }) {
   const { user, loading } = useAuth()
@@ -89,6 +96,13 @@ export default function App() {
             <Route path="/signin" element={<PublicOnlyRoute><SignIn /></PublicOnlyRoute>} />
             <Route path="/onboarding" element={<ProtectedRoute><SupplierOnboarding /></ProtectedRoute>} />
             <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+            <Route path="/products/new" element={<ProtectedRoute><AddProduct /></ProtectedRoute>} />
+            <Route path="/profile/edit" element={<ProtectedRoute><EditProfile /></ProtectedRoute>} />
+            <Route path="/products/:id" element={<ProtectedRoute><ProductDetail /></ProtectedRoute>} />
+            <Route path="/products/:id/edit" element={<ProtectedRoute><EditProduct /></ProtectedRoute>} />
+            <Route path="/products/:id/order" element={<ProtectedRoute><PlaceOrder /></ProtectedRoute>} />
+            <Route path="/orders" element={<ProtectedRoute><Orders /></ProtectedRoute>} />
+            <Route path="/orders/:id" element={<ProtectedRoute><OrderDetail /></ProtectedRoute>} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </AuthProvider>
