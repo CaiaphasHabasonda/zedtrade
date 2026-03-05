@@ -14,6 +14,7 @@ import Orders from './pages/Orders'
 import OrderDetail from './pages/OrderDetail'
 import Browse from './pages/Browse'
 import SupplierProfile from './pages/SupplierProfile'
+import PaymentCallback from './pages/PaymentCallback'
 
 
 function ProtectedRoute({ children }) {
@@ -108,6 +109,7 @@ export default function App() {
             <Route path="/orders/:id" element={<ProtectedRoute><OrderDetail /></ProtectedRoute>} />
             <Route path="/browse" element={<ProtectedRoute><Browse /></ProtectedRoute>} />
             <Route path="/suppliers/:id" element={<ProtectedRoute><SupplierProfile /></ProtectedRoute>} />
+            <Route path="/payment/callback" element={<ProtectedRoute><PaymentCallback /></ProtectedRoute>} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </AuthProvider>

@@ -5,17 +5,18 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-   "build": "npx vite build",
+    "build": "npx vite build",
     "preview": "vite preview"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.39.0",
     "@tanstack/react-query": "^5.17.0",
+    "axios": "^1.13.6",
+    "lucide-react": "^0.309.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-hook-form": "^7.49.0",
-    "react-router-dom": "^6.21.0",
-    "lucide-react": "^0.309.0"
+    "react-router-dom": "^6.21.0"
   },
   "devDependencies": {
     "@types/react": "^18.2.0",

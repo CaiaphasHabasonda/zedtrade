@@ -1,3 +1,4 @@
+import { initiatePayment } from '../lib/pesapal'
 import { useState, useEffect } from 'react'
 import { Link, useParams, useNavigate } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
@@ -59,29 +60,58 @@ export default function PlaceOrder() {
     setLoading(true)
     setError(null)
 
-    const { error } = await supabase.from('orders').insert({
-      buyer_id: user.id,
-      supplier_id: product.supplier_id,
-      product_id: product.id,
-      quantity: quantity,
-      unit_price: parseFloat(product.price),
-      total_price: parseFloat(totalPrice),
-      status: 'pending',
-      buyer_name: data.buyer_name,
-      buyer_phone: data.buyer_phone,
-      buyer_location: data.buyer_location,
-      notes: data.notes || null,
-    })
+    try {
+      // Create order in database first
+      const { data: newOrder, error: orderError } = await supabase
+        .from('orders')
+        .insert({
+          buyer_id: user.id,
+          supplier_id: product.supplier_id,
+          product_id: product.id,
+          quantity: quantity,
+          unit_price: parseFloat(product.price),
+          total_price: parseFloat(totalPrice),
+          status: 'pending',
+          payment_status: 'unpaid',
+          buyer_name: data.buyer_name,
+          buyer_phone: data.buyer_phone,
+          buyer_location: data.buyer_location,
+          notes: data.notes || null,
+        })
+        .select()
+        .single()
 
-    setLoading(false)
+      if (orderError) throw new Error(orderError.message)
 
-    if (error) {
-      setError(error.message)
-    } else {
-      setSuccess(true)
+      // Initiate Pesapal payment
+      const payment = await initiatePayment({
+        orderId: newOrder.id,
+        amount: parseFloat(totalPrice),
+        description: `Order for ${product.name} from ZedTrade`,
+        buyerEmail: user.email,
+        buyerPhone: data.buyer_phone,
+        buyerName: data.buyer_name,
+        buyerLocation: data.buyer_location,
+      })
+
+      if (payment.success) {
+        // Save tracking ID to order
+        await supabase
+          .from('orders')
+          .update({ flw_transaction_id: payment.orderTrackingId })
+          .eq('id', newOrder.id)
+
+        // Redirect to Pesapal payment page
+        window.location.href = payment.redirectUrl
+      } else {
+        throw new Error(payment.error)
+      }
+
+    } catch (err) {
+      setError(err.message)
+      setLoading(false)
     }
   }
-
   if (fetching) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-stone-50">
