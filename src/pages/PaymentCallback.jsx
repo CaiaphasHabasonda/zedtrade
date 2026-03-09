@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react'
 import { useSearchParams, Link } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabase'
-import { getPesapalToken, getTransactionStatus } from '../lib/pesapal'
 import { CheckCircle, XCircle, Clock } from 'lucide-react'
 
 export default function PaymentCallback() {
@@ -20,18 +19,28 @@ export default function PaymentCallback() {
     }
   }, [orderId, orderTrackingId])
 
-  const verifyPayment = async () => {
+ const verifyPayment = async () => {
     try {
-      const token = await getPesapalToken()
-      const result = await getTransactionStatus(token, orderTrackingId)
+      const { data: tokenData } = await supabase.functions.invoke('pesapal-payment', {
+        body: { action: 'get_token', payload: {} }
+      })
 
-      const COMMISSION_RATE = 0.04
+      const response = await fetch(
+        `https://cybqa.pesapal.com/pesapalv3/api/Transactions/GetTransactionStatus?orderTrackingId=${orderTrackingId}`,
+        {
+          headers: {
+            Accept: 'application/json',
+            Authorization: `Bearer ${tokenData?.token}`,
+          },
+        }
+      )
+      const result = await response.json()
+
       const totalPrice = parseFloat(result.amount || 0)
-      const platformFee = totalPrice * COMMISSION_RATE
+      const platformFee = totalPrice * 0.04
       const supplierAmount = totalPrice - platformFee
 
       if (result.payment_status_description === 'Completed') {
-        // Update order as paid
         await supabase
           .from('orders')
           .update({
@@ -45,7 +54,6 @@ export default function PaymentCallback() {
           })
           .eq('id', orderId)
 
-        // Log payment
         await supabase.from('payments').insert({
           order_id: orderId,
           buyer_id: user.id,
@@ -69,7 +77,6 @@ export default function PaymentCallback() {
         setStatus('pending')
       }
 
-      // Fetch order details
       const { data } = await supabase
         .from('orders')
         .select('*, products(name), supplier_profiles(business_name)')

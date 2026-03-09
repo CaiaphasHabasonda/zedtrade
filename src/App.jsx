@@ -15,6 +15,10 @@ import OrderDetail from './pages/OrderDetail'
 import Browse from './pages/Browse'
 import SupplierProfile from './pages/SupplierProfile'
 import PaymentCallback from './pages/PaymentCallback'
+import AdminDashboard from './pages/admin/AdminDashboard'
+import AdminRoute from './components/AdminRoute'
+import AdminSuppliers from './pages/admin/AdminSuppliers'
+import AdminOrders from './pages/admin/AdminOrders'
 
 
 function ProtectedRoute({ children }) {
@@ -110,6 +114,9 @@ export default function App() {
             <Route path="/browse" element={<ProtectedRoute><Browse /></ProtectedRoute>} />
             <Route path="/suppliers/:id" element={<ProtectedRoute><SupplierProfile /></ProtectedRoute>} />
             <Route path="/payment/callback" element={<ProtectedRoute><PaymentCallback /></ProtectedRoute>} />
+            <Route path="/admin" element={<AdminRoute><AdminDashboard /></AdminRoute>} />
+            <Route path="/admin/suppliers" element={<AdminRoute><AdminSuppliers /></AdminRoute>} />
+            <Route path="/admin/orders" element={<AdminRoute><AdminOrders /></AdminRoute>} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </AuthProvider>
