@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect,  } from 'react'
 import { Link, useParams, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabase'
@@ -257,115 +257,7 @@ function DisputeForm({ orderId, supplierId, buyerId }) {
   )
 }
 
-// Messaging Component
-function OrderMessages({ orderId, userId, otherPartyName }) {
-  const [messages, setMessages] = useState([])
-  const [newMessage, setNewMessage] = useState('')
-  const [loading, setLoading] = useState(false)
-  const messagesEndRef = useRef(null)
 
-  useEffect(() => {
-    fetchMessages()
-
-    // Real-time subscription
-    const channel = supabase
-      .channel(`messages:${orderId}`)
-      .on('postgres_changes', {
-        event: 'INSERT',
-        schema: 'public',
-        table: 'messages',
-        filter: `order_id=eq.${orderId}`,
-      }, (payload) => {
-        setMessages(prev => [...prev, payload.new])
-      })
-      .subscribe()
-
-    return () => supabase.removeChannel(channel)
-  }, [orderId])
-
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [messages])
-
-  const fetchMessages = async () => {
-    const { data } = await supabase
-      .from('messages')
-      .select('*')
-      .eq('order_id', orderId)
-      .order('created_at', { ascending: true })
-    setMessages(data || [])
-  }
-
-  const sendMessage = async () => {
-    if (!newMessage.trim()) return
-    setLoading(true)
-    await supabase.from('messages').insert({
-      order_id: orderId,
-      sender_id: userId,
-      message: newMessage.trim(),
-    })
-    setNewMessage('')
-    setLoading(false)
-  }
-
-  return (
-    <div className="bg-white rounded-2xl border border-stone-200 overflow-hidden">
-      <div className="p-4 border-b border-stone-100">
-        <h3 className="font-semibold text-stone-700 text-sm uppercase tracking-wide">
-          Messages
-        </h3>
-        <p className="text-xs text-stone-400 mt-0.5">Chat with {otherPartyName}</p>
-      </div>
-
-      {/* Messages */}
-      <div className="h-48 overflow-y-auto p-4 space-y-3">
-        {messages.length === 0 ? (
-          <p className="text-center text-stone-400 text-sm py-8">
-            No messages yet. Start the conversation!
-          </p>
-        ) : (
-          messages.map(msg => (
-            <div
-              key={msg.id}
-              className={`flex ${msg.sender_id === userId ? 'justify-end' : 'justify-start'}`}
-            >
-              <div className={`max-w-xs px-3 py-2 rounded-xl text-sm ${
-                msg.sender_id === userId
-                  ? 'bg-copper-500 text-white'
-                  : 'bg-stone-100 text-stone-800'
-              }`}>
-                <p>{msg.message}</p>
-                <p className={`text-xs mt-1 ${msg.sender_id === userId ? 'text-copper-200' : 'text-stone-400'}`}>
-                  {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                </p>
-              </div>
-            </div>
-          ))
-        )}
-        <div ref={messagesEndRef} />
-      </div>
-
-      {/* Input */}
-      <div className="p-3 border-t border-stone-100 flex gap-2">
-        <input
-          type="text"
-          placeholder="Type a message..."
-          value={newMessage}
-          onChange={e => setNewMessage(e.target.value)}
-          onKeyDown={e => e.key === 'Enter' && sendMessage()}
-          className="input flex-1 py-2 text-sm"
-        />
-        <button
-          onClick={sendMessage}
-          disabled={loading || !newMessage.trim()}
-          className="btn-primary px-4 py-2 text-sm disabled:opacity-50"
-        >
-          Send
-        </button>
-      </div>
-    </div>
-  )
-}
 export default function OrderDetail() {
   const { id } = useParams()
   const { user, supplierProfile } = useAuth()
@@ -408,10 +300,17 @@ export default function OrderDetail() {
     if (!confirm('Are you sure you want to delete this order from your history?')) return
     setUpdating(true)
     const updateField = isSupplier ? 'deleted_by_supplier' : 'deleted_by_buyer'
-    const { error } = await supabase
+    
+    console.log('Deleting order:', id, 'as', isSupplier ? 'supplier' : 'buyer', 'field:', updateField)
+    
+    const { data, error } = await supabase
       .from('orders')
       .update({ [updateField]: true })
       .eq('id', id)
+      .select()
+
+    console.log('Result:', { data, error })
+
     if (error) {
       setError(error.message)
       setUpdating(false)
@@ -419,7 +318,6 @@ export default function OrderDetail() {
       navigate('/orders')
     }
   }
-
   const updateStatus = async (newStatus) => {
     setUpdating(true)
     setError(null)
@@ -654,13 +552,7 @@ export default function OrderDetail() {
               </div>
             </div>
           )}
-          {/* Messages - available to both parties */}
-          <OrderMessages
-            orderId={id}
-            userId={user.id}
-            otherPartyName={isSupplier ? order.buyer_name : order.supplier_profiles?.business_name}
-          />
-
+    
           {/* Dispute - buyers only on delivered orders */}
           {!isSupplier && order.status === 'delivered' && (
             <DisputeForm
@@ -680,13 +572,12 @@ export default function OrderDetail() {
           {/* Delete order - available to both roles for completed orders */}
           {(['delivered', 'rejected', 'cancelled'].includes(order.status)) && (
             <button
-              onClick={handleDelete}
-              disabled={updating}
-              className="w-full flex items-center justify-center gap-2 p-3 bg-stone-50 border border-stone-200 text-stone-400 font-medium rounded-xl hover:bg-red-50 hover:border-red-200 hover:text-red-500 transition-colors disabled:opacity-50 text-sm"
-            >
-              <Trash2 className="w-4 h-4" />
-              {updating ? 'Deleting...' : 'Delete Order'}
-            </button>
+  onClick={handleDelete}
+  disabled={updating}
+  className="..."
+>
+  Delete
+</button>
           )}
           {!isSupplier && order.status === 'pending' && (
             <button

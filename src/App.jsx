@@ -21,6 +21,7 @@ import AdminSuppliers from './pages/admin/AdminSuppliers'
 import AdminOrders from './pages/admin/AdminOrders'
 import AdminProducts from './pages/admin/AdminProducts'
 import AdminDisputes from './pages/admin/AdminDisputes'
+import Inbox from './pages/Inbox'
 
 
 function ProtectedRoute({ children }) {
@@ -121,6 +122,7 @@ export default function App() {
             <Route path="/admin/orders" element={<AdminRoute><AdminOrders /></AdminRoute>} />
             <Route path="/admin/products" element={<AdminRoute><AdminProducts /></AdminRoute>} />
            <Route path="/admin/disputes" element={<AdminRoute><AdminDisputes /></AdminRoute>} />
+            <Route path="/inbox" element={<ProtectedRoute><Inbox /></ProtectedRoute>} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </AuthProvider>

@@ -12,9 +12,9 @@ export default function AdminRoute({ children }) {
     )
   }
 
-  if (!user || user?.user_metadata?.role !== 'admin') {
+  if (!user || !user?.user_metadata?.is_admin) {
     return <Navigate to="/signin" replace />
-  }
+}
 
   return children
 }

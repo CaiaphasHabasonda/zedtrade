@@ -35,6 +35,9 @@ function TopNav({ user, onSignOut }) {
               <Link to="/orders" className="px-3 py-2 rounded-lg text-sm font-medium text-stone-600 hover:bg-stone-50 hover:text-stone-900 transition-colors">
                 Orders
               </Link>
+              <Link to="/inbox" className="px-3 py-2 rounded-lg text-sm font-medium text-stone-600 hover:bg-stone-50">
+  Inbox
+</Link>
               <Link to="/products/new" className="px-3 py-2 rounded-lg text-sm font-medium text-stone-600 hover:bg-stone-50 hover:text-stone-900 transition-colors">
                 Add Product
               </Link>
@@ -51,8 +54,11 @@ function TopNav({ user, onSignOut }) {
                 Browse
               </Link>
               <Link to="/orders" className="px-3 py-2 rounded-lg text-sm font-medium text-stone-600 hover:bg-stone-50 hover:text-stone-900 transition-colors">
-                My Orders
+                My Order
               </Link>
+              <Link to="/inbox" className="px-3 py-2 rounded-lg text-sm font-medium text-stone-600 hover:bg-stone-50">
+  Inbox
+</Link>
             </>
           )}
         </div>
@@ -103,6 +109,7 @@ const [products, setProducts] = useState([])
         .select(`*, products (name, images, unit)`)
         .eq('supplier_id', profile.id)
         .eq('deleted_by_supplier', false)
+
         .order('created_at', { ascending: false })
         .limit(5)
       setRecentOrders(data || [])
@@ -363,6 +370,7 @@ function BuyerDashboard({ user, onSignOut }) {
         .from('orders')
         .select(`*, products (name, images, unit), supplier_profiles (business_name)`)
         .eq('buyer_id', user.id)
+.eq('deleted_by_buyer', false)  // ADD THIS LINE
         .order('created_at', { ascending: false })
       setOrders(data || [])
       setLoading(false)
