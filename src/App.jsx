@@ -19,6 +19,7 @@ import AdminDashboard from './pages/admin/AdminDashboard'
 import AdminRoute from './components/AdminRoute'
 import AdminSuppliers from './pages/admin/AdminSuppliers'
 import AdminOrders from './pages/admin/AdminOrders'
+import AdminProducts from './pages/admin/AdminProducts'
 
 
 function ProtectedRoute({ children }) {
@@ -117,6 +118,7 @@ export default function App() {
             <Route path="/admin" element={<AdminRoute><AdminDashboard /></AdminRoute>} />
             <Route path="/admin/suppliers" element={<AdminRoute><AdminSuppliers /></AdminRoute>} />
             <Route path="/admin/orders" element={<AdminRoute><AdminOrders /></AdminRoute>} />
+            <Route path="/admin/products" element={<AdminRoute><AdminProducts /></AdminRoute>} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </AuthProvider>
