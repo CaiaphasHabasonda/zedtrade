@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Link, useParams, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabase'
@@ -139,6 +139,233 @@ function ReviewForm({ orderId, productId, supplierId, buyerId }) {
     </div>
   )
 }
+// Dispute Form Component
+function DisputeForm({ orderId, supplierId, buyerId }) {
+  const [reason, setReason] = useState('')
+  const [description, setDescription] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [submitted, setSubmitted] = useState(false)
+  const [existing, setExisting] = useState(false)
+  const [error, setError] = useState(null)
+
+  useEffect(() => {
+    supabase
+      .from('disputes')
+      .select('id')
+      .eq('order_id', orderId)
+      .single()
+      .then(({ data }) => {
+        if (data) setSubmitted(true)
+        setExisting(!!data)
+      })
+  }, [orderId])
+
+  const handleSubmit = async () => {
+    if (!reason) { setError('Please select a reason.'); return }
+    if (!description) { setError('Please describe the issue.'); return }
+    setLoading(true)
+    setError(null)
+
+    const { error } = await supabase.from('disputes').insert({
+      order_id: orderId,
+      buyer_id: buyerId,
+      supplier_id: supplierId,
+      reason,
+      description,
+      status: 'open',
+    })
+
+    if (!error) {
+      // Notify admin
+      await supabase.from('notifications').insert({
+        user_id: buyerId,
+        title: 'Dispute Submitted',
+        message: 'Your dispute has been submitted. Our team will review it shortly.',
+        type: 'dispute',
+        link: `/orders/${orderId}`,
+      })
+    }
+
+    setLoading(false)
+    if (error) { setError(error.message) } else { setSubmitted(true) }
+  }
+
+  if (submitted) {
+    return (
+      <div className="bg-white rounded-2xl border border-stone-200 p-5">
+        <div className="flex items-center gap-2 text-yellow-600">
+          <AlertCircle className="w-5 h-5" />
+          <p className="font-semibold">
+            {existing ? 'Dispute already submitted for this order.' : 'Dispute submitted! Our team will review it.'}
+          </p>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="bg-white rounded-2xl border border-red-200 p-5">
+      <h3 className="font-semibold text-red-700 text-sm mb-4 uppercase tracking-wide flex items-center gap-2">
+        <AlertCircle className="w-4 h-4" /> Raise a Dispute
+      </h3>
+
+      <div className="mb-4">
+        <label className="label">Reason</label>
+        <select
+          className="input"
+          value={reason}
+          onChange={e => setReason(e.target.value)}
+        >
+          <option value="">Select a reason...</option>
+          <option value="item_not_received">Item not received</option>
+          <option value="item_not_as_described">Item not as described</option>
+          <option value="wrong_item">Wrong item delivered</option>
+          <option value="damaged_item">Item arrived damaged</option>
+          <option value="partial_delivery">Partial delivery</option>
+          <option value="other">Other</option>
+        </select>
+      </div>
+
+      <div className="mb-4">
+        <label className="label">Describe the issue</label>
+        <textarea
+          rows={3}
+          placeholder="Please provide details about the problem..."
+          className="input resize-none"
+          value={description}
+          onChange={e => setDescription(e.target.value)}
+        />
+      </div>
+
+      {error && (
+        <div className="mb-3 p-3 bg-red-50 border border-red-200 rounded-lg flex items-start gap-2">
+          <AlertCircle className="w-4 h-4 text-red-500 flex-shrink-0 mt-0.5" />
+          <p className="text-red-600 text-sm">{error}</p>
+        </div>
+      )}
+
+      <button
+        onClick={handleSubmit}
+        disabled={loading}
+        className="w-full flex items-center justify-center gap-2 p-3 bg-red-50 border border-red-200 text-red-700 font-semibold rounded-xl hover:bg-red-100 transition-colors disabled:opacity-50"
+      >
+        {loading ? (
+          <><div className="w-4 h-4 border-2 border-red-300 border-t-red-600 rounded-full animate-spin" />Submitting...</>
+        ) : 'Submit Dispute'}
+      </button>
+    </div>
+  )
+}
+
+// Messaging Component
+function OrderMessages({ orderId, userId, otherPartyName }) {
+  const [messages, setMessages] = useState([])
+  const [newMessage, setNewMessage] = useState('')
+  const [loading, setLoading] = useState(false)
+  const messagesEndRef = useRef(null)
+
+  useEffect(() => {
+    fetchMessages()
+
+    // Real-time subscription
+    const channel = supabase
+      .channel(`messages:${orderId}`)
+      .on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'messages',
+        filter: `order_id=eq.${orderId}`,
+      }, (payload) => {
+        setMessages(prev => [...prev, payload.new])
+      })
+      .subscribe()
+
+    return () => supabase.removeChannel(channel)
+  }, [orderId])
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }, [messages])
+
+  const fetchMessages = async () => {
+    const { data } = await supabase
+      .from('messages')
+      .select('*')
+      .eq('order_id', orderId)
+      .order('created_at', { ascending: true })
+    setMessages(data || [])
+  }
+
+  const sendMessage = async () => {
+    if (!newMessage.trim()) return
+    setLoading(true)
+    await supabase.from('messages').insert({
+      order_id: orderId,
+      sender_id: userId,
+      message: newMessage.trim(),
+    })
+    setNewMessage('')
+    setLoading(false)
+  }
+
+  return (
+    <div className="bg-white rounded-2xl border border-stone-200 overflow-hidden">
+      <div className="p-4 border-b border-stone-100">
+        <h3 className="font-semibold text-stone-700 text-sm uppercase tracking-wide">
+          Messages
+        </h3>
+        <p className="text-xs text-stone-400 mt-0.5">Chat with {otherPartyName}</p>
+      </div>
+
+      {/* Messages */}
+      <div className="h-48 overflow-y-auto p-4 space-y-3">
+        {messages.length === 0 ? (
+          <p className="text-center text-stone-400 text-sm py-8">
+            No messages yet. Start the conversation!
+          </p>
+        ) : (
+          messages.map(msg => (
+            <div
+              key={msg.id}
+              className={`flex ${msg.sender_id === userId ? 'justify-end' : 'justify-start'}`}
+            >
+              <div className={`max-w-xs px-3 py-2 rounded-xl text-sm ${
+                msg.sender_id === userId
+                  ? 'bg-copper-500 text-white'
+                  : 'bg-stone-100 text-stone-800'
+              }`}>
+                <p>{msg.message}</p>
+                <p className={`text-xs mt-1 ${msg.sender_id === userId ? 'text-copper-200' : 'text-stone-400'}`}>
+                  {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                </p>
+              </div>
+            </div>
+          ))
+        )}
+        <div ref={messagesEndRef} />
+      </div>
+
+      {/* Input */}
+      <div className="p-3 border-t border-stone-100 flex gap-2">
+        <input
+          type="text"
+          placeholder="Type a message..."
+          value={newMessage}
+          onChange={e => setNewMessage(e.target.value)}
+          onKeyDown={e => e.key === 'Enter' && sendMessage()}
+          className="input flex-1 py-2 text-sm"
+        />
+        <button
+          onClick={sendMessage}
+          disabled={loading || !newMessage.trim()}
+          className="btn-primary px-4 py-2 text-sm disabled:opacity-50"
+        >
+          Send
+        </button>
+      </div>
+    </div>
+  )
+}
 export default function OrderDetail() {
   const { id } = useParams()
   const { user, supplierProfile } = useAuth()
@@ -210,6 +437,26 @@ export default function OrderDetail() {
       setUpdating(false)
     } else {
       setOrder(prev => ({ ...prev, status: newStatus }))
+
+      // Notify the other party
+      const notifyUserId = isSupplier ? order.buyer_id : order.supplier_profiles?.user_id
+      const statusMessages = {
+        confirmed: { title: 'Order Confirmed! 🎉', message: `Your order for ${order.products?.name} has been confirmed by the supplier.` },
+        rejected:  { title: 'Order Rejected', message: `Your order for ${order.products?.name} was rejected by the supplier.` },
+        delivered: { title: 'Order Delivered! 📦', message: `Your order for ${order.products?.name} has been marked as delivered.` },
+        cancelled: { title: 'Order Cancelled', message: `Your order for ${order.products?.name} has been cancelled.` },
+      }
+
+      if (notifyUserId && statusMessages[newStatus]) {
+        await supabase.from('notifications').insert({
+          user_id: notifyUserId,
+          title: statusMessages[newStatus].title,
+          message: statusMessages[newStatus].message,
+          type: 'order',
+          link: `/orders/${id}`,
+        })
+      }
+
       setUpdating(false)
     }
   }
@@ -407,6 +654,23 @@ export default function OrderDetail() {
               </div>
             </div>
           )}
+          {/* Messages - available to both parties */}
+          <OrderMessages
+            orderId={id}
+            userId={user.id}
+            otherPartyName={isSupplier ? order.buyer_name : order.supplier_profiles?.business_name}
+          />
+
+          {/* Dispute - buyers only on delivered orders */}
+          {!isSupplier && order.status === 'delivered' && (
+            <DisputeForm
+              orderId={id}
+              supplierId={order.supplier_id}
+              buyerId={user.id}
+            />
+          )}
+
+
 
           {/* Buyer cancel option */}
           {/* Buyer review - only for delivered orders */}

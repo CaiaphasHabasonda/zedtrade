@@ -82,6 +82,23 @@ export default function PlaceOrder() {
         .single()
 
       if (orderError) throw new Error(orderError.message)
+        // Notify buyer
+      await supabase.from('notifications').insert({
+        user_id: user.id,
+        title: 'Order Placed!',
+        message: `Your order for ${product.name} has been placed. Waiting for supplier confirmation.`,
+        type: 'order',
+        link: `/orders/${newOrder.id}`,
+      })
+
+      // Notify supplier
+      await supabase.from('notifications').insert({
+        user_id: product.user_id,
+        title: 'New Order Received!',
+        message: `${data.buyer_name} ordered ${quantity} ${product.unit} of ${product.name}.`,
+        type: 'order',
+        link: `/orders/${newOrder.id}`,
+      })
 
       // Initiate Pesapal payment
       const payment = await initiatePayment({

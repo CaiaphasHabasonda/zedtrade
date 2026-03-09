@@ -119,6 +119,9 @@ export default function AdminDashboard() {
             <Link to="/admin/products" className="px-3 py-2 rounded-lg text-sm font-medium text-stone-600 hover:bg-stone-50">
               Products
             </Link>
+            <Link to="/admin/disputes" className="px-3 py-2 rounded-lg text-sm font-medium text-stone-600 hover:bg-stone-50">
+              Disputes
+            </Link>
           </div>
 
           <div className="flex items-center gap-3">

@@ -1,6 +1,8 @@
+import Notifications from '../components/Notifications'
 import { useState, useEffect } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
+
 import { supabase } from '../lib/supabase'
 import {
   Store, Package, ShoppingCart, Star,
@@ -57,6 +59,7 @@ function TopNav({ user, onSignOut }) {
 
         {/* Right side */}
         <div className="flex items-center gap-2">
+          <Notifications />
           <div className="w-8 h-8 rounded-full bg-copper-100 flex items-center justify-center">
             <span className="text-copper-600 font-bold text-sm">{initial}</span>
           </div>
